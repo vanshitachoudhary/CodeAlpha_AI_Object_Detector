@@ -1,20 +1,22 @@
 from ultralytics import YOLO
 import cv2
 import tempfile
-import os
+from collections import Counter
 
-# ---------------- Load YOLO Model ---------------- #
+# ---------------- MODEL ---------------- #
 
-model = YOLO("yolov8n.pt")
+MODEL = YOLO("yolov8s.pt")   # Better than yolov8n
+
+
 def get_model():
-    return model
+    return MODEL
 
 
-# ---------------- Image Detection ---------------- #
+# ---------------- IMAGE DETECTION ---------------- #
 
-def detect_image(image, confidence):
+def detect_image(image, confidence=0.4):
 
-    results = model.predict(
+    results = MODEL.predict(
         image,
         conf=confidence,
         verbose=False
@@ -22,55 +24,55 @@ def detect_image(image, confidence):
 
     annotated = results[0].plot()
 
-    names = model.names
+    counts = Counter()
 
-    counts = {}
+    names = MODEL.names
 
-    for box in results[0].boxes:
+    if len(results[0].boxes):
 
-        cls = int(box.cls[0])
+        for cls in results[0].boxes.cls:
 
-        name = names[cls]
+            counts[names[int(cls)]] += 1
 
-        counts[name] = counts.get(name, 0) + 1
-
-    return annotated, counts
+    return annotated, dict(counts)
 
 
-# ---------------- Video Detection + Tracking ---------------- #
+# ---------------- VIDEO DETECTION ---------------- #
 
-def detect_video(video_file, confidence):
+def detect_video(uploaded_video, confidence=0.4):
 
-    temp_input = tempfile.NamedTemporaryFile(
-        delete=False,
-        suffix=".mp4"
-    )
+    temp_input = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
 
-    temp_input.write(video_file.read())
+    temp_input.write(uploaded_video.read())
 
     temp_input.close()
 
-    output_path = os.path.join(
-        "output",
-        "detected_video.mp4"
-    )
-
     cap = cv2.VideoCapture(temp_input.name)
 
-    width = int(cap.get(3))
-    height = int(cap.get(4))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
     fps = cap.get(cv2.CAP_PROP_FPS)
 
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    output_path = tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=".mp4"
+    ).name
 
-    out = cv2.VideoWriter(
+    writer = cv2.VideoWriter(
+
         output_path,
-        fourcc,
+
+        cv2.VideoWriter_fourcc(*"mp4v"),
+
         fps,
+
         (width, height)
+
     )
 
-    object_counter = {}
+    counts = Counter()
 
     while True:
 
@@ -79,34 +81,34 @@ def detect_video(video_file, confidence):
         if not success:
             break
 
-        results = model.track(
+        results = MODEL.track(
+
             frame,
+
             conf=confidence,
+
             persist=True,
+
             tracker="bytetrack.yaml",
+
             verbose=False
+
         )
 
         annotated = results[0].plot()
 
-        out.write(annotated)
+        writer.write(annotated)
 
-        if results[0].boxes is not None:
+        names = MODEL.names
 
-            for box in results[0].boxes:
+        if len(results[0].boxes):
 
-                cls = int(box.cls[0])
+            for cls in results[0].boxes.cls:
 
-                name = model.names[cls]
-
-                object_counter[name] = (
-                    object_counter.get(name, 0) + 1
-                )
+                counts[names[int(cls)]] += 1
 
     cap.release()
 
-    out.release()
+    writer.release()
 
-    os.remove(temp_input.name)
-
-    return output_path, object_counter
+    return output_path, dict(counts)

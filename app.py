@@ -1,13 +1,13 @@
 import streamlit as st
 import numpy as np
-import cv2
-import time
 from PIL import Image
 from detector import detect_image, detect_video, get_model
+import plotly.express as px
+import pandas as pd
+import time
+import os
 
-model = get_model()
-
-# ---------------- PAGE ---------------- #
+# ---------------- PAGE CONFIG ---------------- #
 
 st.set_page_config(
     page_title="AI Vision Object Detector Pro",
@@ -27,143 +27,88 @@ if "videos" not in st.session_state:
 if "objects" not in st.session_state:
     st.session_state.objects = 0
 
+model = get_model()
+
 # ---------------- CSS ---------------- #
 
 st.markdown("""
-
 <style>
 
-html,body{
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
-background:#0E1117;
-
-font-family:Arial;
-
+html,body,[class*="css"]{
+font-family:'Poppins',sans-serif;
 }
 
 .main{
-
-background:#0E1117;
-
+background:linear-gradient(135deg,#0f172a,#111827,#1e293b);
+color:white;
 }
 
 .block-container{
-
-max-width:1350px;
-
 padding-top:2rem;
-
+max-width:1400px;
 }
 
 section[data-testid="stSidebar"]{
-
 background:#111827;
+border-right:1px solid #374151;
+}
+
+.hero{
+
+background:linear-gradient(90deg,#2563eb,#7c3aed);
+
+padding:35px;
+
+border-radius:20px;
+
+color:white;
+
+box-shadow:0px 10px 40px rgba(0,0,0,.35);
+
+margin-bottom:25px;
+
+}
+
+.card{
+
+background:#1f2937;
+
+padding:18px;
+
+border-radius:18px;
+
+text-align:center;
+
+box-shadow:0px 8px 25px rgba(0,0,0,.35);
+
+transition:.3s;
+
+}
+
+.card:hover{
+
+transform:translateY(-5px);
 
 }
 
 .metric-card{
 
-background:#1F2937;
+background:#111827;
 
-padding:15px;
+padding:20px;
 
-border-radius:15px;
-
-text-align:center;
-
-box-shadow:0 0 15px rgba(0,0,0,.35);
-
-}
-
-.hero{
-
-padding:30px;
-
-border-radius:20px;
-
-background:linear-gradient(90deg,#2563EB,#06B6D4);
-
-color:white;
+border-radius:18px;
 
 text-align:center;
 
-margin-bottom:20px;
-
-}
-
-footer{
-
-visibility:hidden;
+border:1px solid #374151;
 
 }
 
 </style>
-
-""",unsafe_allow_html=True)
-
-# ---------------- SIDEBAR ---------------- #
-
-with st.sidebar:
-
-    st.title("🤖 AI Vision")
-
-    st.success("Version 4.0")
-
-    st.caption("YOLOv8 + ByteTrack")
-
-    st.divider()
-
-    mode = st.radio(
-
-        "Select Mode",
-
-        [
-
-            "🖼 Image Detection",
-
-            "🎥 Video Detection",
-
-            "📷 Live Webcam"
-
-        ]
-
-    )
-
-    confidence = st.slider(
-
-        "Confidence",
-
-        0.10,
-
-        1.00,
-
-        0.40,
-
-        0.05
-
-    )
-
-    st.divider()
-
-    st.subheader("📊 Dashboard")
-
-    st.metric("Images",st.session_state.images)
-
-    st.metric("Videos",st.session_state.videos)
-
-    st.metric("Objects",st.session_state.objects)
-
-    st.metric("AI Status","🟢 Online")
-
-    st.divider()
-
-    st.write("### AI Engine")
-
-    st.success("YOLOv8 Nano")
-
-    st.info("ByteTrack Enabled")
-
-    st.write("Python 3.11")
+""", unsafe_allow_html=True)
 
 # ---------------- HERO ---------------- #
 
@@ -171,83 +116,93 @@ st.markdown("""
 
 <div class="hero">
 
-<h1>
+<h1>🤖 AI Vision Object Detector Pro</h1>
 
-🤖 AI Vision Object Detector Pro
-
-</h1>
-
-<h3>
-
-Deep Learning • Computer Vision • YOLOv8 • ByteTrack
-
-</h3>
+<h4>YOLOv8 • ByteTrack • OpenCV • Deep Learning</h4>
 
 <p>
-
-Upload an image, video or use your webcam to detect and track objects using Artificial Intelligence.
-
+Detect objects in Images, Videos and Live Webcam with AI.
 </p>
 
 </div>
 
-""",unsafe_allow_html=True)
+""", unsafe_allow_html=True)
+
+# ---------------- SIDEBAR ---------------- #
+
+st.sidebar.title("🤖 AI Vision")
+
+st.sidebar.markdown("### Version 5.0")
+
+st.sidebar.success("🟢 AI Online")
+
+mode = st.sidebar.radio(
+
+"Detection Mode",
+
+[
+"🖼 Image Detection",
+"🎥 Video Detection",
+"📷 Live Webcam"
+]
+
+)
+
+confidence = st.sidebar.slider(
+
+"Confidence",
+
+0.10,
+
+1.00,
+
+0.40,
+
+0.05
+
+)
+
+st.sidebar.markdown("---")
+
+st.sidebar.subheader("AI Information")
+
+st.sidebar.write("🤖 Model : YOLOv8")
+
+st.sidebar.write("🎯 Tracking : ByteTrack")
+
+st.sidebar.write("💻 Python : 3.11")
+
+st.sidebar.write("⚡ Status : Active")
 
 # ---------------- DASHBOARD ---------------- #
 
-d1,d2,d3,d4=st.columns(4)
+c1,c2,c3,c4 = st.columns(4)
 
-with d1:
+with c1:
+    st.metric(
+        "🖼 Images",
+        st.session_state.images
+    )
 
-    st.metric("📷 Images",st.session_state.images)
+with c2:
+    st.metric(
+        "🎥 Videos",
+        st.session_state.videos
+    )
 
-with d2:
+with c3:
+    st.metric(
+        "📦 Objects",
+        st.session_state.objects
+    )
 
-    st.metric("🎥 Videos",st.session_state.videos)
-
-with d3:
-
-    st.metric("📦 Objects",st.session_state.objects)
-
-with d4:
-
-    st.metric("🤖 Model","YOLOv8")
-# ---------------- AI FEATURES ---------------- #
-
-st.markdown("## ✨ AI Features")
-
-f1, f2, f3, f4 = st.columns(4)
-
-with f1:
-    st.info("""
-### 🧠 YOLOv8
-
-Real-Time Object Detection
-""")
-
-with f2:
-    st.info("""
-### 🎯 ByteTrack
-
-Object Tracking IDs
-""")
-
-with f3:
-    st.info("""
-### ⚡ Fast AI
-
-Optimized Inference
-""")
-
-with f4:
-    st.info("""
-### 📊 Analytics
-
-Detection Statistics
-""")
+with c4:
+    st.metric(
+        "🤖 AI",
+        "Online"
+    )
 
 st.markdown("---")
-
 # ---------------- IMAGE DETECTION ---------------- #
 
 if mode == "🖼 Image Detection":
@@ -255,51 +210,47 @@ if mode == "🖼 Image Detection":
     st.subheader("🖼 AI Image Detection")
 
     uploaded_image = st.file_uploader(
-
-        "Upload Image",
-
-        type=["jpg","jpeg","png"]
-
+        "Upload an Image",
+        type=["jpg", "jpeg", "png"]
     )
 
     if uploaded_image:
+
+        start = time.time()
 
         image = Image.open(uploaded_image).convert("RGB")
 
         image_np = np.array(image)
 
-        start = time.time()
-
-        with st.spinner("🤖 Detecting Objects..."):
+        with st.spinner("🤖 AI is analyzing your image..."):
 
             detected_image, object_counts = detect_image(
-
                 image_np,
-
                 confidence
-
             )
 
-        end = round(time.time()-start,2)
+        end = time.time()
 
-        total = sum(object_counts.values())
+        process_time = round(end - start, 2)
 
         st.session_state.images += 1
 
-        st.session_state.objects += total
+        total_objects = sum(object_counts.values())
 
-        c1,c2 = st.columns(2)
+        st.session_state.objects += total_objects
 
-        with c1:
+        col1, col2 = st.columns(2)
 
-            st.markdown("### 📷 Original Image")
+        with col1:
+
+            st.markdown("### 📷 Original")
 
             st.image(
                 image,
                 use_container_width=True
             )
 
-        with c2:
+        with col2:
 
             st.markdown("### 🎯 Detection Result")
 
@@ -310,100 +261,122 @@ if mode == "🖼 Image Detection":
 
         st.markdown("---")
 
-        a1,a2,a3,a4 = st.columns(4)
+        m1, m2, m3, m4 = st.columns(4)
 
-        with a1:
-            st.metric("Objects",total)
+        with m1:
+            st.metric(
+                "📦 Objects",
+                total_objects
+            )
 
-        with a2:
-            st.metric("Classes",len(object_counts))
+        with m2:
+            st.metric(
+                "🏷 Classes",
+                len(object_counts)
+            )
 
-        with a3:
-            st.metric("Confidence",f"{int(confidence*100)}%")
+        with m3:
+            st.metric(
+                "🎯 Confidence",
+                f"{int(confidence*100)}%"
+            )
 
-        with a4:
-            st.metric("Time",f"{end}s")
+        with m4:
+            st.metric(
+                "⚡ Time",
+                f"{process_time}s"
+            )
 
-        st.markdown("### 📦 Objects Found")
+        st.markdown("## 📊 Detection Analytics")
 
         if object_counts:
 
-            for obj,count in object_counts.items():
+            df = pd.DataFrame(
+                {
+                    "Object": list(object_counts.keys()),
+                    "Count": list(object_counts.values())
+                }
+            )
 
-                st.success(f"✅ {obj.title()} : {count}")
+            chart1, chart2 = st.columns(2)
+
+            with chart1:
+
+                fig = px.bar(
+                    df,
+                    x="Object",
+                    y="Count",
+                    text="Count",
+                    title="Detected Objects"
+                )
+
+                st.plotly_chart(
+                    fig,
+                    use_container_width=True
+                )
+
+            with chart2:
+
+                fig2 = px.pie(
+                    df,
+                    names="Object",
+                    values="Count",
+                    hole=.45,
+                    title="Object Distribution"
+                )
+
+                st.plotly_chart(
+                    fig2,
+                    use_container_width=True
+                )
+
+            st.markdown("### 📋 Detection Summary")
+
+            for obj, count in object_counts.items():
+
+                st.success(f"✅ {obj} : {count}")
+
+            csv = df.to_csv(index=False)
+
+            st.download_button(
+                "📄 Download Detection Report",
+                csv,
+                file_name="detection_report.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
 
         else:
 
             st.warning("No objects detected.")
-
-        image_bytes = cv2.imencode(
-            ".jpg",
-            cv2.cvtColor(
-                detected_image,
-                cv2.COLOR_RGB2BGR
-            )
-        )[1].tobytes()
-
-        st.download_button(
-
-            "📥 Download Result",
-
-            image_bytes,
-
-            file_name="detected_image.jpg",
-
-            mime="image/jpeg",
-
-            use_container_width=True
-
-        )
-
-st.markdown("---")
 # ---------------- VIDEO DETECTION ---------------- #
 
 if mode == "🎥 Video Detection":
 
-    st.subheader("🎥 AI Video Detection & Tracking")
+    st.subheader("🎥 AI Video Detection")
 
     uploaded_video = st.file_uploader(
-
-        "Upload Video",
-
+        "Upload a Video",
         type=["mp4", "avi", "mov"]
-
     )
 
     if uploaded_video:
 
         start = time.time()
 
-        with st.spinner("🤖 Processing video..."):
+        with st.spinner("🤖 AI is processing your video..."):
 
             output_video, object_counts = detect_video(
-
                 uploaded_video,
-
                 confidence
-
             )
 
-        processing_time = round(
+        end = time.time()
 
-            time.time() - start,
-
-            2
-
-        )
-
-        total_objects = sum(
-
-            object_counts.values()
-
-        )
+        process_time = round(end-start,2)
 
         st.session_state.videos += 1
-
-        st.session_state.objects += total_objects
+        st.session_state.objects += sum(object_counts.values())
 
         st.success("✅ Video Processed Successfully")
 
@@ -411,72 +384,46 @@ if mode == "🎥 Video Detection":
 
         st.markdown("---")
 
-        st.subheader("📊 Video Analytics")
+        c1,c2,c3,c4 = st.columns(4)
 
-        v1, v2, v3, v4 = st.columns(4)
+        with c1:
+            st.metric("📦 Objects",sum(object_counts.values()))
 
-        with v1:
-            st.metric(
-                "Objects",
-                total_objects
-            )
+        with c2:
+            st.metric("🏷 Classes",len(object_counts))
 
-        with v2:
-            st.metric(
-                "Classes",
-                len(object_counts)
-            )
+        with c3:
+            st.metric("⚡ Time",f"{process_time}s")
 
-        with v3:
-            st.metric(
-                "Tracking",
-                "ByteTrack"
-            )
-
-        with v4:
-            st.metric(
-                "Time",
-                f"{processing_time}s"
-            )
-
-        st.markdown("### 📦 Objects Found")
+        with c4:
+            st.metric("🎯 Confidence",f"{int(confidence*100)}%")
 
         if object_counts:
 
-            for obj, count in object_counts.items():
+            df = pd.DataFrame({
 
-                st.success(f"✅ {obj.title()} : {count}")
+                "Object":list(object_counts.keys()),
+                "Count":list(object_counts.values())
 
-        else:
+            })
 
-            st.warning("No objects detected.")
+            fig = px.bar(
+                df,
+                x="Object",
+                y="Count",
+                text="Count",
+                title="Detected Objects"
+            )
 
-        report = "AI Vision Detection Report\n"
-        report += "-" * 35 + "\n\n"
+            st.plotly_chart(fig,use_container_width=True)
 
-        for obj, count in object_counts.items():
+            st.markdown("### 📋 Detection Summary")
 
-            report += f"{obj.title()} : {count}\n"
+            for obj,count in object_counts.items():
 
-        report += f"\nTotal Objects : {total_objects}"
-        report += f"\nClasses : {len(object_counts)}"
-        report += f"\nProcessing Time : {processing_time}s"
+                st.success(f"✅ {obj} : {count}")
 
-        st.download_button(
-
-            "📄 Download Detection Report",
-
-            report,
-
-            file_name="detection_report.txt",
-
-            mime="text/plain",
-
-            use_container_width=True
-
-        )
-
-        with open(output_video, "rb") as file:
+        with open(output_video,"rb") as file:
 
             st.download_button(
 
@@ -492,127 +439,87 @@ if mode == "🎥 Video Detection":
 
             )
 
-st.markdown("---")
-# ---------------- LIVE WEBCAM ---------------- #
+# ---------------- WEBCAM ---------------- #
 
-if mode == "📷 Live Webcam":
+if mode=="📷 Live Webcam":
 
-    st.subheader("📷 Live AI Webcam Detection")
+    st.subheader("📷 Live AI Webcam")
 
-    start_camera = st.checkbox("Start Webcam")
+    run = st.checkbox("Start Webcam")
 
-    if start_camera:
+    frame_window = st.image([])
 
-        FRAME_WINDOW = st.image([])
+    if run:
+
+        import cv2
 
         cap = cv2.VideoCapture(0)
 
-        fps_placeholder = st.empty()
+        while run:
 
-        object_placeholder = st.empty()
-
-        start_time = time.time()
-
-        total_frames = 0
-
-        while start_camera:
-
-            success, frame = cap.read()
+            success,frame = cap.read()
 
             if not success:
+
                 st.error("Unable to access webcam.")
+
                 break
 
             results = model.track(
+
                 frame,
+
                 conf=confidence,
+
                 persist=True,
+
                 tracker="bytetrack.yaml",
+
                 verbose=False
+
             )
 
             annotated = results[0].plot()
 
-            FRAME_WINDOW.image(
+            frame_window.image(
+
                 cv2.cvtColor(
+
                     annotated,
+
                     cv2.COLOR_BGR2RGB
-                ),
-                use_container_width=True
-            )
 
-            total_frames += 1
-
-            elapsed = time.time() - start_time
-
-            fps = total_frames / elapsed if elapsed > 0 else 0
-
-            fps_placeholder.metric(
-                "⚡ FPS",
-                f"{fps:.1f}"
-            )
-
-            count = 0
-
-            if results[0].boxes is not None:
-
-                count = len(results[0].boxes)
-
-            object_placeholder.metric(
-
-                "📦 Objects",
-
-                count
+                )
 
             )
 
         cap.release()
-# ---------------- AI DASHBOARD ---------------- #
+
+# ---------------- FINAL DASHBOARD ---------------- #
 
 st.markdown("---")
 
 st.subheader("📊 AI Vision Dashboard")
 
-c1, c2, c3, c4 = st.columns(4)
+d1,d2,d3,d4 = st.columns(4)
 
-with c1:
-    st.metric(
-        "📷 Images Processed",
-        st.session_state.images
-    )
+with d1:
+    st.metric("Images",st.session_state.images)
 
-with c2:
-    st.metric(
-        "🎥 Videos Processed",
-        st.session_state.videos
-    )
+with d2:
+    st.metric("Videos",st.session_state.videos)
 
-with c3:
-    st.metric(
-        "📦 Total Objects",
-        st.session_state.objects
-    )
+with d3:
+    st.metric("Objects",st.session_state.objects)
 
-with c4:
-    st.metric(
-        "🤖 AI Status",
-        "🟢 Active"
-    )
+with d4:
+    st.metric("AI Status","🟢 Active")
 
 st.markdown("---")
 
-# ---------------- ABOUT AI ---------------- #
+st.info("""
 
-st.subheader("🚀 AI Features")
-
-feature1, feature2 = st.columns(2)
-
-with feature1:
-
-    st.success("""
-✅ YOLOv8 Object Detection
-
-✅ ByteTrack Tracking
+🤖 **AI Vision Object Detector Pro**
 
 ✅ Image Detection
 
@@ -620,70 +527,36 @@ with feature1:
 
 ✅ Live Webcam
 
-✅ AI Analytics
+✅ YOLOv8 Deep Learning
+
+✅ ByteTrack Tracking
+
+✅ Interactive Analytics
+
+✅ CSV Report Download
+
+✅ Modern AI Dashboard
+
 """)
-
-with feature2:
-
-    st.info("""
-⚡ Fast Processing
-
-🎯 Adjustable Confidence
-
-📊 Detection Summary
-
-📄 Detection Report
-
-⬇ Download Results
-
-🤖 Deep Learning Powered
-""")
-
-st.markdown("---")
-
-# ---------------- FOOTER ---------------- #
 
 st.markdown(
 """
-<div style='text-align:center;
-padding:30px;
-color:#A0AEC0;'>
+<div style="text-align:center;padding:25px">
 
-<h2>🤖 AI Vision Object Detector Pro V4</h2>
+<h3>🤖 AI Vision Object Detector Pro v5</h3>
 
-<p>
+Built using Python • Streamlit • YOLOv8 • OpenCV • ByteTrack
 
-Built using
+<br><br>
 
-<b>
+Developed by <b>Vanshita Choudhary</b>
 
-Python • Streamlit • OpenCV • YOLOv8 • ByteTrack
+<br>
 
-</b>
-
-</p>
-
-<p>
-
-Artificial Intelligence • Computer Vision • Object Detection
-
-</p>
-
-<p>
-
-Developed by
-
-<b>Vanshita Choudhary</b>
-
-</p>
-
-<p>
-
-🚀 CodeAlpha Python Programming Internship Project
-
-</p>
+🚀 CodeAlpha Python Programming Internship
 
 </div>
+
 """,
 unsafe_allow_html=True
 )            
